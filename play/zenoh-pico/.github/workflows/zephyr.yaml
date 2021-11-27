@@ -1,0 +1,70 @@
+# This program and the accompanying materials are made available under the
+# terms of the Eclipse Public License 2.0 which is available at
+# http://www.eclipse.org/legal/epl-2.0, or the Apache License, Version 2.0
+# which is available at https://www.apache.org/licenses/LICENSE-2.0.
+#
+# SPDX-License-Identifier: EPL-2.0 OR Apache-2.0
+#
+# Contributors:
+#   ADLINK zenoh team, <zenoh@adlink-labs.tech>
+#
+name: zephyr
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+
+    name: Build on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ ubuntu-latest ]
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Install requirements
+      run: |
+        echo "No requirements need to be installed"
+
+    - name: Install PlatformIO
+      run: |
+        python3 -c "$(curl -fsSL https://raw.githubusercontent.com/platformio/platformio/master/scripts/get-platformio.py)"
+        . $HOME/.platformio/penv/bin/activate
+        platformio update
+
+    - name: Set up project
+      run: |
+        cd $HOME
+        export ZEPHYR_BASE=$HOME/work/zephyrproject/
+        export ZENOH_PICO_BASE=$HOME/work/zenoh-pico/zenoh-pico/
+        . $HOME/.platformio/penv/bin/activate
+
+        mkdir -p $ZEPHYR_BASE/lib
+        cd $ZEPHYR_BASE/lib
+        ln -s $ZENOH_PICO_BASE
+
+        mkdir -p $ZEPHYR_BASE/zephyr
+        cd $ZEPHYR_BASE/zephyr
+        ln -s $ZENOH_PICO_BASE/docs/zephyr/nucleo_f767zi/prj.conf prj.conf
+        ln -s $ZENOH_PICO_BASE/docs/zephyr/nucleo_f767zi/CMakeLists.txt CMakeLists.txt
+
+        mkdir -p $ZEPHYR_BASE/src
+        cd $ZEPHYR_BASE/src
+        ln -s $ZENOH_PICO_BASE/examples/net/zn_pub.c zn_pub.c
+
+        cd $ZEPHYR_BASE
+        ln -s $ZENOH_PICO_BASE/docs/zephyr/nucleo_f767zi/platformio.ini platformio.ini
+
+    - name: Build
+      run: |
+        export ZEPHYR_BASE=$HOME/work/zephyrproject/
+        . $HOME/.platformio/penv/bin/activate
+        cd $ZEPHYR_BASE
+        platformio run
